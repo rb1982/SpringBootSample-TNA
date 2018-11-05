@@ -1,0 +1,35 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ${APP_NAME}-${APP_SPACE}
+  namespace: ${K8S_NAMESPACE}
+spec:
+  replicas: ${APP_REPLICAS}
+  revisionHistoryLimit: 0
+  template:
+    metadata:
+      labels:
+        app: ${APP_NAME}-${APP_SPACE}
+        author: ${USERNAME}
+        org: ${K8S_NAMESPACE}
+        space: ${APP_SPACE}
+    spec:
+      imagePullSecrets:
+      - name: reg-secret
+      containers:
+        - name: ${APP_NAME}-${APP_SPACE}
+          image: NE1ITCPRHAS62.ne1.savvis.net:4567/dispatch_services_dev/${APP_NAME}:${APP_IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          resources:
+            limits:
+              memory: ${APP_MEMORY_MB}Mi
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: ${SPRING_PROFILES_ACTIVE}
+            - name: JAVA_OPTS
+              value: -Xms${APP_MEMORY}m -Xmx${APP_MEMORY}m -XX:MetaspaceSize=104857K -XX:MaxMetaspaceSize=104857K -Xss995K -XX:+UseParNewGC -XX:+UseConcMarkSweepGC
+            - name: JAVA_TOOL_OPTIONS
+              value: ${JMX_OPTS}

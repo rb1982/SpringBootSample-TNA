@@ -1,0 +1,27 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:opt="http://www.clicksoftware.com/OptionalParameters" xmlns:clic="http://www.clicksoftware.com"> 
+     <soapenv:Header> 
+         <opt:OptionalParameters> 
+            <opt:CallerIdentity>DGWAPP</opt:CallerIdentity> 
+            <opt:ErrorOnNonExistingDictionaries>1</opt:ErrorOnNonExistingDictionaries> 
+         </opt:OptionalParameters> 
+         </soapenv:Header> 
+            <soapenv:Body> 
+               <clic:CreateNonAvailability> 
+                     <clic:Assignment> 
+	                     <clic:Start>2017-12-20T12:01</clic:Start> 
+	                     <clic:Finish>2017-12-20T12:02</clic:Finish> 
+	                     <clic:Engineers> 
+	                        <clic:Engineer> 
+                               <clic:ID>AB68740</clic:ID> 
+                               <clic:District> 
+                                  <clic:Name>Ashland WI</clic:Name> 
+                               </clic:District> 
+	                        </clic:Engineer> 
+	                     </clic:Engineers> 
+	                     <clic:Comment>null </clic:Comment> 
+	                     <clic:NonAvailabilityType>General Meeting/Admin</clic:NonAvailabilityType> 
+                     </clic:Assignment> 
+               </clic:CreateNonAvailability> 
+           </soapenv:Body> 
+   </soapenv:Envelope> 
+ 

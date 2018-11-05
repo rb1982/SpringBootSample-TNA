@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APP_NAME}-${APP_SPACE}-service
+  namespace: ${K8S_NAMESPACE}
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: ${APP_NAME}-${APP_SPACE}

@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.0.3.RELEASE</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+
+	<properties>
+	    <projectVersion>1.2.2</projectVersion> <!-- Used as property so that it can be overridden if needed from .gitlab-ci.yml during CI -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+		<spring-cloud.version>Finchley.RELEASE</spring-cloud.version>
+		<log.version>2.0.1</log.version>
+		<database.version>1.1.2</database.version>
+		<common.version>1.3.1</common.version>
+		<failOnMissingWebXml>false</failOnMissingWebXml>
+		<httpclient.version>4.5.4</httpclient.version>
+
+	</properties>
+	
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.centurylink.cgs</groupId>
+	<artifactId>TechNonAvailability</artifactId>
+	<version>${projectVersion}</version>
+	<packaging>war</packaging>
+
+	<name>TechnicianNonAvailability</name>
+	<description>This project updates technician non availability in click</description>
+	<repositories>
+		<repository>
+			<id>ctl.nexus.development</id>
+			<url>http://nexus.corp.intranet/nexus/content/repositories/test</url>
+			<snapshots>
+				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>ctl.nexus.test</id>
+			<url>http://nexus.corp.intranet/nexus/content/repositories/thirdparty</url>
+			<snapshots>
+				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>ctl.nexus.snapshot</id>
+			<url>http://nexus.corp.intranet/nexus/content/repositories/snapshots</url>
+			<snapshots>
+				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
+			</snapshots>
+		</repository>
+	</repositories>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cloud-connectors</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-ws</artifactId>
+			<version>1.1.3.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-log4j</artifactId>
+			<version>1.3.8.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>com.oracle</groupId>
+			<artifactId>ojdbc7</artifactId>
+			<version>12.1.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.restdocs</groupId>
+			<artifactId>spring-restdocs-mockmvc</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.ws</groupId>
+			<artifactId>spring-ws-test</artifactId>
+			<version>2.1.4.RELEASE</version>
+		</dependency>
+		<!-- Dispatch Dependencies -->
+
+		<dependency>
+			<groupId>com.centurylink.cgs</groupId>
+			<artifactId>DispatchDatabase</artifactId>
+			<version>${database.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.centurylink.cgs</groupId>
+			<artifactId>DispatchLog</artifactId>
+			<version>${log.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.centurylink.cgs</groupId>
+			<artifactId>DispatchCommon</artifactId>
+			<version>${common.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.centurylink.cgs.webservicestubs</groupId>
+			<artifactId>ServiceOptimizationService</artifactId>
+			<version>1.0.3</version>
+		</dependency>
+		 <dependency>
+			<groupId>com.ctl.esec</groupId>
+			<artifactId>esec</artifactId>
+			<version>3.0.0</version>
+		</dependency>
+	  </dependencies>
+		
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+	    <finalName>${project.artifactId}</finalName> 
+		<plugins>
+		     <plugin>
+	          <groupId>org.apache.maven.plugins</groupId>
+	          <artifactId>maven-dependency-plugin</artifactId>
+	          <version>3.1.1</version>
+	          <executions>
+	            <execution>
+	              <id>copy-packaged</id>
+	              <phase>package</phase>
+	              <goals>
+	                <goal>copy</goal>
+	              </goals>
+	              <configuration>
+	                <artifactItems>
+	                  <artifactItem>
+	                  	<groupId>com.centurylink.cgs</groupId>
+						<artifactId>CommonUtilsAll</artifactId>
+						<version>1.0.0</version>
+						<type>jar</type>
+						<outputDirectory>./target</outputDirectory>
+		                <overWrite>true</overWrite>
+		                <destFileName>CommonUtilsAll.jar</destFileName>
+	                  </artifactItem>
+	                </artifactItems>
+	              </configuration>
+	            </execution>
+	          </executions>
+	        </plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<additionalProperties>
+						<encoding.source>UTF-8</encoding.source>
+					</additionalProperties>
+				</configuration>
+			</plugin>
+			<!--Maven plugin for providing env variable to test classes -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.19.1</version>
+				<configuration>
+				    <skipTests>true</skipTests>
+					<argLine>-XX:-UseSplitVerifier</argLine>
+					<environmentVariables>
+						<SPRING_PROFILES_ACTIVE>dev2</SPRING_PROFILES_ACTIVE>
+					</environmentVariables>
+				</configuration>
+			</plugin>
+			<!--Spring-Boot's maven plugin rewrites the original manifest file, therefore 
+				using maven war plugin so that the manifest can be written as normal. -->
+			<plugin>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>3.2.2</version>
+				<configuration>
+					<archive>
+						<manifestEntries>
+							<Build-Time>${maven.build.timestamp}</Build-Time>
+							<Application-Version>${project.version}</Application-Version>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+
+			<!-- plugin so you can run mvn jetty:run -->
+			<plugin>
+				<groupId>org.mortbay.jetty</groupId>
+				<artifactId>jetty-maven-plugin</artifactId>
+				<version>8.1.16.v20140903</version>
+				<configuration>
+					<webAppConfig>
+						<contextPath>/</contextPath>
+					</webAppConfig>
+					<systemProperties>
+						<!-- enable easy JMX connection to JConsole -->
+						<systemProperty>
+							<name>com.sun.management.jmxremote</name>
+							<value />
+						</systemProperty>
+					</systemProperties>
+					<scanIntervalSeconds>10</scanIntervalSeconds>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

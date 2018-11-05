@@ -1,0 +1,11 @@
+---
+applications:
+- name: TechNonAvailabilityE2E
+  memory: 512M
+  instances: 2
+  host: technonavailabilitye2e
+  domain: pcfomactl.dev.intranet
+  env:
+   JAVA_OPTS: "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC -Duser.timezone=US/Central"
+   JBP_CONFIG_OPEN_JDK_JRE: "[jre: {version: 1.8.0_+}, memory_calculator: {memory_sizes: {metaspace: 128m.., permgen: 128m. .}}]"
+   SPRING_PROFILES_ACTIVE: "e2e"

@@ -1,0 +1,273 @@
+image: docker:latest
+
+variables:
+
+ # Application specific info
+ 
+  APP_NAME: "technonavailability"
+  USERNAME: "gitlab-ci-token"
+  APP_OWNER_EMAIL: "DS_Git_Notification@centurylink.com"
+  APP_IMAGE_TAG: "${APP_NAME}_${CI_COMMIT_REF_NAME}.${CI_PIPELINE_ID}"
+
+ # Maven options
+  MAVEN_CLI_OPTS: "-DprojectVersion=${CI_PIPELINE_ID} -s ./settings.xml --batch-mode"
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  TARGET: target/*.war
+  
+  # Registry info
+  REG_BASE_URI: "NE1ITCPRHAS62.ne1.savvis.net:4567"
+  REG_IMAGE: "${REG_BASE_URI}/dispatch_services_dev/${APP_NAME}:${APP_NAME}_${CI_COMMIT_REF_NAME}.${CI_PIPELINE_ID}"
+  REG_TOKEN: "4gxjEmdM3wdANS64sgbK"
+  REG_SECRET: "reg-secret"
+ 
+# Different Stages to be executed
+
+stages:
+  - build
+  - push
+  - deploy
+
+ # Maven build
+maven-build:
+  image: maven:3-jdk-8
+  stage: build
+  script: 
+    - "mvn ${MAVEN_CLI_OPTS} install"
+  artifacts: 
+    name: "${CI_BUILD_ID}_${CI_BUILD_STAGE}_${CI_BUILD_REF_NAME}"
+    paths:
+      - "${TARGET}"
+      
+  # Docker build    
+docker-build:
+  stage: push
+  only: 
+     - master
+     - Emer
+     - Next
+     - Future
+  script:
+    - echo "REG_IMAGE = ${REG_IMAGE} CI_COMMIT_SHA = ${CI_COMMIT_SHA} BRANCH = ${CI_COMMIT_REF_NAME}"
+    - docker login -u gitlab-ci-token -p ${REG_TOKEN} ${REG_BASE_URI}
+    - docker build -t ${REG_IMAGE} .
+    - docker push ${REG_IMAGE}
+    
+# Deployment to Kubernetes 
+deploy-k8s-dev1:
+  #using below image because it contains envsubst
+  image: marcuswelz/gitlabci-docker-git-gcloud
+  variables:
+    APP_SPACE: "dev1"
+    SPRING_PROFILES_ACTIVE : "dev1"
+    APP_REPLICAS: "1" 
+    APP_MEMORY_MB: "1024"
+    APP_MEMORY: "768"
+    JMX_OPTS: "-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=5000 -Dcom.sun.management.jmxremote.rmi.port=5000"
+    APP_API_NAME: "${APP_NAME}-${APP_SPACE}"  
+    # K8S info
+    ING_K8S_DOMAIN: "kubeodc.corp.intranet"
+    K8S_CLUSTER_URL: "https://kubeapiodc.corp.intranet"
+    K8S_NAMESPACE: "dispatch-services-dev"    
+  stage: deploy
+  only: 
+     - master
+     - Emer
+     - Next
+     - Future
+  script:
+    - "echo APP_SPACE=${APP_SPACE} APP_API_NAME=${APP_API_NAME} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}"        
+      #set kubernetes credentials 
+    - kubectl config set-cluster mine --server=${K8S_CLUSTER_URL} --insecure-skip-tls-verify=true
+    - kubectl config set-credentials mine --token="eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkaXNwYXRjaC1zZXJ2aWNlcy1kZXYiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoiZGlzcGF0Y2gtc2VydmljZXMtZGV2LXRva2VuLWp3am44Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImRpc3BhdGNoLXNlcnZpY2VzLWRldiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImJiOTRhYTMxLWFjOWMtMTFlOC05ODI0LTAwNTA1NmE3ZGIzOCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkaXNwYXRjaC1zZXJ2aWNlcy1kZXY6ZGlzcGF0Y2gtc2VydmljZXMtZGV2In0.sbXETj_llrn8r8ahvQk6lFWiKm6GPBY5zL6XoS6oI0YeW6giMqOxwdmnl1tQDXgxUcpMbPdXXNhfiThxxww5uznNq8xUr3GgjaPsZt2gXcoF0MeI5AIn78avwhY4yTGpF0OMhoACmV26mVPgaMEncEDP9hizaQ1Qa3eihLNiBdasCXQ4chGuL78LFnsgGDEcit7K8k5JFC4LdXMuc-6gmWe6i1iy9jPC016_qhokZyzX_hhAc9hYb_oYu-IIh1LpOmDtoZ6gKcfcUdGv2-KvnMgp9aofo9WsLBD1tgMlGBGuWjUDwp49guSfgCyXgn0l2zK5B1DP_LpMFjdoxDhQnQ"
+    - kubectl config set-context mine --cluster=mine --user=mine --namespace=${K8S_NAMESPACE}
+    - kubectl config use-context mine
+      
+      #kube secret to access docker registry 
+    - kubectl delete secret ${REG_SECRET} -n ${K8S_NAMESPACE} || true
+    - kubectl create secret docker-registry ${REG_SECRET} --docker-server=${REG_BASE_URI} --docker-username=gitlab-ci-token --docker-password=${REG_TOKEN} --docker-email=${APP_OWNER_EMAIL} -n ${K8S_NAMESPACE}
+    
+      #kubernetes won't allow variables in the yaml files so using envsubst workaround so we can use them 
+    - env envsubst < deployment.tmpl > deployment.yaml
+    - env envsubst < service.tmpl > service.yaml
+    - env envsubst < ingress.tmpl > ingress.yaml
+
+      #using delete/create on deployment to force docker deployment with :latest image version
+    - kubectl delete -f deployment.yaml || true
+    - kubectl create -f deployment.yaml
+    - kubectl apply -f service.yaml -f ingress.yaml
+    - kubectl -n ${K8S_NAMESPACE} describe ingress ${APP_API_NAME}
+  when: manual
+
+deploy-k8s-dev2:
+  #using below image because it contains envsubst
+  image: marcuswelz/gitlabci-docker-git-gcloud
+  variables:
+    APP_SPACE: "dev2"
+    SPRING_PROFILES_ACTIVE : "dev2"
+    APP_REPLICAS: "1" 
+    APP_MEMORY_MB: "1024"
+    APP_MEMORY: "768"
+    JMX_OPTS: "-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=5000 -Dcom.sun.management.jmxremote.rmi.port=5000"
+    APP_API_NAME: "${APP_NAME}-${APP_SPACE}"  
+    # K8S info
+    ING_K8S_DOMAIN: "kubeodc.corp.intranet"
+    K8S_CLUSTER_URL: "https://kubeapiodc.corp.intranet"
+    K8S_NAMESPACE: "dispatch-services-dev"    
+  stage: deploy
+  only: 
+     - master
+     - Emer
+     - Next
+     - Future
+  script:
+    - "echo APP_SPACE=${APP_SPACE} APP_API_NAME=${APP_API_NAME} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}"        
+      #set kubernetes credentials 
+    - kubectl config set-cluster mine --server=${K8S_CLUSTER_URL} --insecure-skip-tls-verify=true
+    - kubectl config set-credentials mine --token="eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkaXNwYXRjaC1zZXJ2aWNlcy1kZXYiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoiZGlzcGF0Y2gtc2VydmljZXMtZGV2LXRva2VuLWp3am44Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImRpc3BhdGNoLXNlcnZpY2VzLWRldiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImJiOTRhYTMxLWFjOWMtMTFlOC05ODI0LTAwNTA1NmE3ZGIzOCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkaXNwYXRjaC1zZXJ2aWNlcy1kZXY6ZGlzcGF0Y2gtc2VydmljZXMtZGV2In0.sbXETj_llrn8r8ahvQk6lFWiKm6GPBY5zL6XoS6oI0YeW6giMqOxwdmnl1tQDXgxUcpMbPdXXNhfiThxxww5uznNq8xUr3GgjaPsZt2gXcoF0MeI5AIn78avwhY4yTGpF0OMhoACmV26mVPgaMEncEDP9hizaQ1Qa3eihLNiBdasCXQ4chGuL78LFnsgGDEcit7K8k5JFC4LdXMuc-6gmWe6i1iy9jPC016_qhokZyzX_hhAc9hYb_oYu-IIh1LpOmDtoZ6gKcfcUdGv2-KvnMgp9aofo9WsLBD1tgMlGBGuWjUDwp49guSfgCyXgn0l2zK5B1DP_LpMFjdoxDhQnQ"
+    - kubectl config set-context mine --cluster=mine --user=mine --namespace=${K8S_NAMESPACE}
+    - kubectl config use-context mine
+      
+      #kube secret to access docker registry 
+    - kubectl delete secret ${REG_SECRET} -n ${K8S_NAMESPACE} || true
+    - kubectl create secret docker-registry ${REG_SECRET} --docker-server=${REG_BASE_URI} --docker-username=gitlab-ci-token --docker-password=${REG_TOKEN} --docker-email=${APP_OWNER_EMAIL} -n ${K8S_NAMESPACE}
+    
+      #kubernetes won't allow variables in the yaml files so using envsubst workaround so we can use them 
+    - env envsubst < deployment.tmpl > deployment.yaml
+    - env envsubst < service.tmpl > service.yaml
+    - env envsubst < ingress.tmpl > ingress.yaml
+
+      #using delete/create on deployment to force docker deployment with :latest image version
+    - kubectl delete -f deployment.yaml || true
+    - kubectl create -f deployment.yaml
+    - kubectl apply -f service.yaml -f ingress.yaml
+    - kubectl -n ${K8S_NAMESPACE} describe ingress ${APP_API_NAME}
+  when: manual
+
+deploy-k8s-test1:
+  #using below image because it contains envsubst
+  image: marcuswelz/gitlabci-docker-git-gcloud
+  variables:
+    APP_SPACE: "test1"
+    SPRING_PROFILES_ACTIVE : "test1"
+    APP_REPLICAS: "1" 
+    APP_MEMORY_MB: "1024"
+    APP_MEMORY: "768"
+    JMX_OPTS: "-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=5000 -Dcom.sun.management.jmxremote.rmi.port=5000"
+    APP_API_NAME: "${APP_NAME}-${APP_SPACE}"  
+    # K8S info
+    ING_K8S_DOMAIN: "kubeodc.corp.intranet"
+    K8S_CLUSTER_URL: "https://kubeapiodc.corp.intranet"
+    K8S_NAMESPACE: "dispatch-services-test"    
+  stage: deploy
+  only: 
+     - master
+     - Emer
+  script:
+    - "echo APP_SPACE=${APP_SPACE} APP_API_NAME=${APP_API_NAME} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}"        
+      #set kubernetes credentials 
+    - kubectl config set-cluster mine --server=${K8S_CLUSTER_URL} --insecure-skip-tls-verify=true
+    - kubectl config set-credentials mine --token="eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkaXNwYXRjaC1zZXJ2aWNlcy10ZXN0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRpc3BhdGNoLXNlcnZpY2VzLXRlc3QtdG9rZW4teGY0eGciLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGlzcGF0Y2gtc2VydmljZXMtdGVzdCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6Ijg4ZTU5YzRhLWFjOWItMTFlOC05ODI0LTAwNTA1NmE3ZGIzOCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkaXNwYXRjaC1zZXJ2aWNlcy10ZXN0OmRpc3BhdGNoLXNlcnZpY2VzLXRlc3QifQ.elviBxzXJN8cPWWsAfUtFzfds6FHIE_k52loOT3JuwSnZfhRUIdGJmIKCvLPDc_uBTNOYTD7ChjOcrhDWg84HUdoO5jLUJ67XLFGmh5X5auFQSPoO8izIHdxvqMLFtAip_O9hkDFfforMMeFk2iH9xJBNz4thOLyw7VH27HoxBO4SCw3EszEAIARwENjPKDgzOiFNVaUqOqelOgO0SJw3skYvkM6o4SNpfjXlFrauc0N6DLgpwlb9AUTN_Fmp4G9nj3OwCgh56tzUvAn_6zXxOX3oZD47U0NqCBHMbnp0sMsw_0cO5Bj79K8YjYlYk1K1DSaCSNK-NCPY4Zbsc1gfg"
+    - kubectl config set-context mine --cluster=mine --user=mine --namespace=${K8S_NAMESPACE}
+    - kubectl config use-context mine
+      
+      #kube secret to access docker registry 
+    - kubectl delete secret ${REG_SECRET} -n ${K8S_NAMESPACE} || true
+    - kubectl create secret docker-registry ${REG_SECRET} --docker-server=${REG_BASE_URI} --docker-username=gitlab-ci-token --docker-password=${REG_TOKEN} --docker-email=${APP_OWNER_EMAIL} -n ${K8S_NAMESPACE}
+    
+      #kubernetes won't allow variables in the yaml files so using envsubst workaround so we can use them 
+    - env envsubst < deployment.tmpl > deployment.yaml
+    - env envsubst < service.tmpl > service.yaml
+    - env envsubst < ingress.tmpl > ingress.yaml
+
+      #using delete/create on deployment to force docker deployment with :latest image version
+    - kubectl delete -f deployment.yaml || true
+    - kubectl create -f deployment.yaml
+    - kubectl apply -f service.yaml -f ingress.yaml
+    - kubectl -n ${K8S_NAMESPACE} describe ingress ${APP_API_NAME}
+  when: manual
+
+deploy-k8s-test2:
+  #using below image because it contains envsubst
+  image: marcuswelz/gitlabci-docker-git-gcloud
+  variables:
+    APP_SPACE: "test2"
+    SPRING_PROFILES_ACTIVE : "test2"
+    APP_REPLICAS: "1" 
+    APP_MEMORY_MB: "1024"
+    APP_MEMORY: "768"
+    JMX_OPTS: "-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=5000 -Dcom.sun.management.jmxremote.rmi.port=5000"
+    APP_API_NAME: "${APP_NAME}-${APP_SPACE}"  
+    # K8S info
+    ING_K8S_DOMAIN: "kubeodc.corp.intranet"
+    K8S_CLUSTER_URL: "https://kubeapiodc.corp.intranet"
+    K8S_NAMESPACE: "dispatch-services-test"    
+  stage: deploy
+  only: 
+     - master
+     - Emer
+  script:
+    - "echo APP_SPACE=${APP_SPACE} APP_API_NAME=${APP_API_NAME} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}"        
+      #set kubernetes credentials 
+    - kubectl config set-cluster mine --server=${K8S_CLUSTER_URL} --insecure-skip-tls-verify=true
+    - kubectl config set-credentials mine --token="eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkaXNwYXRjaC1zZXJ2aWNlcy10ZXN0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRpc3BhdGNoLXNlcnZpY2VzLXRlc3QtdG9rZW4teGY0eGciLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGlzcGF0Y2gtc2VydmljZXMtdGVzdCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6Ijg4ZTU5YzRhLWFjOWItMTFlOC05ODI0LTAwNTA1NmE3ZGIzOCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkaXNwYXRjaC1zZXJ2aWNlcy10ZXN0OmRpc3BhdGNoLXNlcnZpY2VzLXRlc3QifQ.elviBxzXJN8cPWWsAfUtFzfds6FHIE_k52loOT3JuwSnZfhRUIdGJmIKCvLPDc_uBTNOYTD7ChjOcrhDWg84HUdoO5jLUJ67XLFGmh5X5auFQSPoO8izIHdxvqMLFtAip_O9hkDFfforMMeFk2iH9xJBNz4thOLyw7VH27HoxBO4SCw3EszEAIARwENjPKDgzOiFNVaUqOqelOgO0SJw3skYvkM6o4SNpfjXlFrauc0N6DLgpwlb9AUTN_Fmp4G9nj3OwCgh56tzUvAn_6zXxOX3oZD47U0NqCBHMbnp0sMsw_0cO5Bj79K8YjYlYk1K1DSaCSNK-NCPY4Zbsc1gfg"
+    - kubectl config set-context mine --cluster=mine --user=mine --namespace=${K8S_NAMESPACE}
+    - kubectl config use-context mine
+      
+      #kube secret to access docker registry 
+    - kubectl delete secret ${REG_SECRET} -n ${K8S_NAMESPACE} || true
+    - kubectl create secret docker-registry ${REG_SECRET} --docker-server=${REG_BASE_URI} --docker-username=gitlab-ci-token --docker-password=${REG_TOKEN} --docker-email=${APP_OWNER_EMAIL} -n ${K8S_NAMESPACE}
+    
+      #kubernetes won't allow variables in the yaml files so using envsubst workaround so we can use them 
+    - env envsubst < deployment.tmpl > deployment.yaml
+    - env envsubst < service.tmpl > service.yaml
+    - env envsubst < ingress.tmpl > ingress.yaml
+
+      #using delete/create on deployment to force docker deployment with :latest image version
+    - kubectl delete -f deployment.yaml || true
+    - kubectl create -f deployment.yaml
+    - kubectl apply -f service.yaml -f ingress.yaml
+    - kubectl -n ${K8S_NAMESPACE} describe ingress ${APP_API_NAME}
+  when: manual
+
+deploy-k8s-e2e:
+  #using below image because it contains envsubst
+  image: marcuswelz/gitlabci-docker-git-gcloud
+  variables:
+    APP_SPACE: "e2e"
+    SPRING_PROFILES_ACTIVE : "e2e"
+    APP_REPLICAS: "1" 
+    APP_MEMORY_MB: "1024"
+    APP_MEMORY: "768"
+    JMX_OPTS: "-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=5000 -Dcom.sun.management.jmxremote.rmi.port=5000"
+    APP_API_NAME: "${APP_NAME}-${APP_SPACE}"  
+    # K8S info
+    ING_K8S_DOMAIN: "kubeodc.corp.intranet"
+    K8S_CLUSTER_URL: "https://kubeapiodc.corp.intranet"
+    K8S_NAMESPACE: "dispatch-services-test"    
+  stage: deploy
+  only: 
+     - master
+     - Emer
+  script:
+    - "echo APP_SPACE=${APP_SPACE} APP_API_NAME=${APP_API_NAME} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}"        
+      #set kubernetes credentials 
+    - kubectl config set-cluster mine --server=${K8S_CLUSTER_URL} --insecure-skip-tls-verify=true
+    - kubectl config set-credentials mine --token="eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkaXNwYXRjaC1zZXJ2aWNlcy10ZXN0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRpc3BhdGNoLXNlcnZpY2VzLXRlc3QtdG9rZW4teGY0eGciLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGlzcGF0Y2gtc2VydmljZXMtdGVzdCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6Ijg4ZTU5YzRhLWFjOWItMTFlOC05ODI0LTAwNTA1NmE3ZGIzOCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkaXNwYXRjaC1zZXJ2aWNlcy10ZXN0OmRpc3BhdGNoLXNlcnZpY2VzLXRlc3QifQ.elviBxzXJN8cPWWsAfUtFzfds6FHIE_k52loOT3JuwSnZfhRUIdGJmIKCvLPDc_uBTNOYTD7ChjOcrhDWg84HUdoO5jLUJ67XLFGmh5X5auFQSPoO8izIHdxvqMLFtAip_O9hkDFfforMMeFk2iH9xJBNz4thOLyw7VH27HoxBO4SCw3EszEAIARwENjPKDgzOiFNVaUqOqelOgO0SJw3skYvkM6o4SNpfjXlFrauc0N6DLgpwlb9AUTN_Fmp4G9nj3OwCgh56tzUvAn_6zXxOX3oZD47U0NqCBHMbnp0sMsw_0cO5Bj79K8YjYlYk1K1DSaCSNK-NCPY4Zbsc1gfg"
+    - kubectl config set-context mine --cluster=mine --user=mine --namespace=${K8S_NAMESPACE}
+    - kubectl config use-context mine
+      
+      #kube secret to access docker registry 
+    - kubectl delete secret ${REG_SECRET} -n ${K8S_NAMESPACE} || true
+    - kubectl create secret docker-registry ${REG_SECRET} --docker-server=${REG_BASE_URI} --docker-username=gitlab-ci-token --docker-password=${REG_TOKEN} --docker-email=${APP_OWNER_EMAIL} -n ${K8S_NAMESPACE}
+    
+      #kubernetes won't allow variables in the yaml files so using envsubst workaround so we can use them 
+    - env envsubst < deployment.tmpl > deployment.yaml
+    - env envsubst < service.tmpl > service.yaml
+    - env envsubst < ingress.tmpl > ingress.yaml
+
+      #using delete/create on deployment to force docker deployment with :latest image version
+    - kubectl delete -f deployment.yaml || true
+    - kubectl create -f deployment.yaml
+    - kubectl apply -f service.yaml -f ingress.yaml
+    - kubectl -n ${K8S_NAMESPACE} describe ingress ${APP_API_NAME}
+  when: manual

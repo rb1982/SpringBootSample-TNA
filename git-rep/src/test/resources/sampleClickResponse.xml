@@ -1,0 +1,59 @@
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+	<s:Body>
+		<CreateNonAvailabilityResponse xmlns="http://www.clicksoftware.com">
+			<Assignment>
+				<Key>5761407</Key>
+				<Revision>1</Revision>
+				<Stamp>
+					<CreatedBy>DGWAPP</CreatedBy>
+					<TimeCreated>2018-02-01T10:06:03</TimeCreated>
+					<CreatingProcess>0</CreatingProcess>
+					<ModifiedBy>DGWAPP</ModifiedBy>
+					<TimeModified>2018-02-01T10:06:03</TimeModified>
+					<ModifyingProcess>0</ModifyingProcess>
+				</Stamp>
+				<Task Key="-1"/>
+				<Start>2018-02-05T10:00:00</Start>
+				<Finish>2018-02-05T11:00:00</Finish>
+				<Engineers>
+					<Engineer Key="386977797" DisplayString="Meti, Vishwanath">
+						<ID>AB67494</ID>
+						<District Key="124442888" DisplayString="Crestview FL">Crestview FL</District>
+					</Engineer>
+				</Engineers>
+				<Comment/>
+				<Location/>
+				<BinaryData/>
+				<Latitude>0</Latitude>
+				<Longitude>0</Longitude>
+				<GISDataSource>0</GISDataSource>
+				<AssignedEngineers>Meti, Vishwanath</AssignedEngineers>
+				<LogicPolicy/>
+				<IsCrewAssignment>0</IsCrewAssignment>
+				<CountryID Key="-1"/>
+				<Street/>
+				<City/>
+				<State/>
+				<Postcode/>
+				<NonAvailabilityType Key="1198004228" DisplayString="Training">Training</NonAvailabilityType>
+				<IgnoreInRoster>0</IgnoreInRoster>
+				<ContractorIndex>0</ContractorIndex>
+				<StateSubdivision/>
+				<CitySubdivision/>
+				<ID/>
+				<WorkAgreementID/>
+				<ExternalRefID/>
+				<IsBreakIncluded>0</IsBreakIncluded>
+				<IncludedBreakDuration>0</IncludedBreakDuration>
+				<AbsenceRequest Key="-1"/>
+				<ExternalComment/>
+				<AssignmentSource>0</AssignmentSource>
+				<PredictiveArea>0</PredictiveArea>
+				<LastEmailNotification>1899-12-30T00:00:00</LastEmailNotification>
+				<ArchiveStatus Key="-1"/>
+				<StartTimeGMT>2018-02-05T16:00:00</StartTimeGMT>
+				<FinishTimeGMT>2018-02-05T17:00:00</FinishTimeGMT>
+			</Assignment>
+		</CreateNonAvailabilityResponse>
+	</s:Body>
+</s:Envelope>

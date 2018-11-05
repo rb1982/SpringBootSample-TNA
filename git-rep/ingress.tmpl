@@ -1,0 +1,25 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ${APP_NAME}-${APP_SPACE}-ing
+  namespace: ${K8S_NAMESPACE}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/session-cookie-name: JSESSIONID
+    kubernetes.io/ingress.allow-http: "true"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  tls:
+  - hosts: 
+    - ${APP_NAME}-${APP_SPACE}.${ING_K8S_DOMAIN}
+    secretName: tls-cert
+  rules:
+  - host: ${APP_NAME}-${APP_SPACE}.${ING_K8S_DOMAIN}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: ${APP_NAME}-${APP_SPACE}-service
+          servicePort: 8080
